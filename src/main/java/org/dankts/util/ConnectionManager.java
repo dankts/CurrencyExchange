@@ -17,7 +17,7 @@ public class ConnectionManager {
         config.setJdbcUrl(PropertiesUtil.getValues("db.url"));
         config.setUsername(PropertiesUtil.getValues("db.username"));
         config.setPassword(PropertiesUtil.getValues("db.password"));
-        config.setDriverClassName("org.postgresql.Driver");
+        config.setDriverClassName(PropertiesUtil.getValues("db.driver"));
 
         config.setMaximumPoolSize(10);
         config.setMinimumIdle(3);
