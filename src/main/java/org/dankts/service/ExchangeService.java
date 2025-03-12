@@ -7,33 +7,34 @@ import org.dankts.entity.ExchangeRate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Optional;
 
 public class ExchangeService {
 
     private final ExchangeRatesDao exchangeRatesDao = new ExchangeRatesDaoImpl();
 
     public ExchangeDto exchange(String from, String to, BigDecimal amount) {
-        ExchangeRate byCode;
-        byCode = exchangeRatesDao.findByCode(from, to);
-        if (byCode != null) {
+        Optional<ExchangeRate> byCode = exchangeRatesDao.findByCode(from, to);
+        if (byCode.isPresent()) {
+            ExchangeRate pair = byCode.get();
             return ExchangeDto.builder()
-                    .id(byCode.getId())
-                    .baseCurrency(byCode.getBaseCurrencyId())
-                    .targetCurrency(byCode.getTargetCurrencyId())
-                    .rate(byCode.getRate())
+                    .id(pair.getId())
+                    .baseCurrency(pair.getBaseCurrencyId())
+                    .targetCurrency(pair.getTargetCurrencyId())
+                    .rate(pair.getRate())
                     .amount(amount)
-                    .convertedAmount(amount.multiply(byCode.getRate()))
+                    .convertedAmount(amount.multiply(pair.getRate()))
                     .build();
         }
 
         byCode = exchangeRatesDao.findByCode(to, from);
-
-        if (byCode != null) {
-            BigDecimal rate = BigDecimal.ONE.divide(byCode.getRate(), 2, RoundingMode.HALF_UP);
+        if (byCode.isPresent()) {
+            ExchangeRate pair = byCode.get();
+            BigDecimal rate = BigDecimal.ONE.divide(pair.getRate(), 2, RoundingMode.HALF_UP);
             return ExchangeDto.builder()
-                    .id(byCode.getId())
-                    .baseCurrency(byCode.getTargetCurrencyId())
-                    .targetCurrency(byCode.getBaseCurrencyId())
+                    .id(pair.getId())
+                    .baseCurrency(pair.getTargetCurrencyId())
+                    .targetCurrency(pair.getBaseCurrencyId())
                     .rate(rate)
                     .amount(amount)
                     .convertedAmount(rate.multiply(amount))
@@ -41,6 +42,4 @@ public class ExchangeService {
         }
         return null;
     }
-
-
 }

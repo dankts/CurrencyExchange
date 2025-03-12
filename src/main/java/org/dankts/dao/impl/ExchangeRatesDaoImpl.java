@@ -11,17 +11,33 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class ExchangeRatesDaoImpl implements ExchangeRatesDao {
+    private static final String SAVE_SQL = """
+            INSERT INTO exchange_rates (base_currency_id, target_currency_id, rate)
+            VALUES  (?, ?, ?)
+            """;
+    private static final String FIND_ALL_SQL = """
+            SELECT er.id er_id,
+            bc.id bc_id, bc.full_name bc_full_name, bc.code bc_code, bc.sign bc_sign,
+            tc.id tc_id, tc.full_name tc_full_name, tc.code tc_code, tc.sign tc_sign,
+            er.rate er_rate
+            FROM exchange_rates er
+            JOIN currencies bc on bc.id = er.base_currency_id
+            JOIN currencies tc on tc.id = er.target_currency_id
+            """;
+    private static final String FIND_BY_CODE_SQL = FIND_ALL_SQL + " WHERE bc.code = ? AND tc.code = ?";
+    private static final String UPDATE_SQL = """
+            UPDATE exchange_rates
+            SET rate = ?
+            WHERE base_currency_id = ? AND target_currency_id = ?;
+            """;
 
     @Override
     public ExchangeRate save(ExchangeRate entity) {
-        String saveSql = """
-                INSERT INTO exchange_rates (base_currency_id, target_currency_id, rate)
-                VALUES  (?, ?, ?)
-                """;
         try (Connection connection = ConnectionManager.getConnection();
-             var preparedStatement = connection.prepareStatement(saveSql, Statement.RETURN_GENERATED_KEYS)) {
+             var preparedStatement = connection.prepareStatement(SAVE_SQL, Statement.RETURN_GENERATED_KEYS)) {
             preparedStatement.setObject(1, entity.getTargetCurrencyId().getId());
             preparedStatement.setObject(2, entity.getBaseCurrencyId().getId());
             preparedStatement.setBigDecimal(3, entity.getRate());
@@ -38,9 +54,8 @@ public class ExchangeRatesDaoImpl implements ExchangeRatesDao {
 
     @Override
     public List<ExchangeRate> findAll() {
-        String findAllSql = getFindAllSql();
         try (Connection connection = ConnectionManager.getConnection();
-             var preparedStatement = connection.prepareStatement(findAllSql)) {
+             var preparedStatement = connection.prepareStatement(FIND_ALL_SQL)) {
             ResultSet resultSet = preparedStatement.executeQuery();
             List<ExchangeRate> result = new ArrayList<>();
             while (resultSet.next()) {
@@ -54,10 +69,9 @@ public class ExchangeRatesDaoImpl implements ExchangeRatesDao {
     }
 
     @Override
-    public ExchangeRate findByCode(String baseCurrencyCode, String targetCurrencyCode) {
-        String findByCodeSql = getFindAllSql() + " WHERE bc.code = ? AND tc.code = ?";
+    public Optional<ExchangeRate> findByCode(String baseCurrencyCode, String targetCurrencyCode) {
         try (Connection connection = ConnectionManager.getConnection();
-             var preparedStatement = connection.prepareStatement(findByCodeSql)) {
+             var preparedStatement = connection.prepareStatement(FIND_BY_CODE_SQL)) {
             preparedStatement.setString(1, baseCurrencyCode);
             preparedStatement.setString(2, targetCurrencyCode);
             ResultSet resultSet = preparedStatement.executeQuery();
@@ -65,7 +79,7 @@ public class ExchangeRatesDaoImpl implements ExchangeRatesDao {
             if (resultSet.next()) {
                 exchangeRate = buildExchangeRate(resultSet);
             }
-            return exchangeRate;
+            return Optional.ofNullable(exchangeRate);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -73,13 +87,8 @@ public class ExchangeRatesDaoImpl implements ExchangeRatesDao {
 
     @Override
     public ExchangeRate update(ExchangeRate exchangeRate) {
-        String updateSql = """
-                UPDATE exchange_rates
-                SET rate = ?
-                WHERE base_currency_id = ? AND target_currency_id = ?;
-                """;
         try (Connection connection = ConnectionManager.getConnection();
-             var preparedStatement = connection.prepareStatement(updateSql)) {
+             var preparedStatement = connection.prepareStatement(UPDATE_SQL)) {
             preparedStatement.setBigDecimal(1, exchangeRate.getRate());
             preparedStatement.setObject(2, exchangeRate.getBaseCurrencyId().getId());
             preparedStatement.setObject(3, exchangeRate.getTargetCurrencyId().getId());
@@ -112,17 +121,5 @@ public class ExchangeRatesDaoImpl implements ExchangeRatesDao {
                 targetCurrency,
                 resultSet.getBigDecimal("er_rate")
         );
-    }
-
-    private String getFindAllSql() {
-        return """
-                SELECT er.id er_id,
-                bc.id bc_id, bc.full_name bc_full_name, bc.code bc_code, bc.sign bc_sign,
-                tc.id tc_id, tc.full_name tc_full_name, tc.code tc_code, tc.sign tc_sign,
-                er.rate er_rate
-                FROM exchange_rates er
-                JOIN currencies bc on bc.id = er.base_currency_id
-                JOIN currencies tc on tc.id = er.target_currency_id
-                """;
     }
 }

@@ -3,6 +3,7 @@ package org.dankts.dao;
 import org.dankts.entity.ExchangeRate;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ExchangeRatesDao {
 
@@ -10,7 +11,7 @@ public interface ExchangeRatesDao {
 
     List<ExchangeRate> findAll();
 
-    ExchangeRate findByCode(String baseCurrencyCode, String targetCurrencyCode);
+    Optional<ExchangeRate> findByCode(String baseCurrencyCode, String targetCurrencyCode);
 
     ExchangeRate update(ExchangeRate entity);
 }

@@ -23,14 +23,17 @@ public class ExchangeRateService {
     private final CurrencyDao currencyDao = new CurrencyDaoImpl();
 
     public ExchangeRateDto create(CreateExchangeRateDto createExchangeRateDto) {
-        Currency baseCurrencyId = currencyDao.getByCode(createExchangeRateDto.getBaseCurrency());
-        Currency targetCurrencyId = currencyDao.getByCode(createExchangeRateDto.getTargetCurrency());
-        if (baseCurrencyId == null || targetCurrencyId == null) {
-            throw new CurrencyNotFoundException();
-        } else if (exchangeRatesDao.findByCode(createExchangeRateDto.getBaseCurrency(),
-                createExchangeRateDto.getTargetCurrency()) != null) {
-            throw new CurrencyPairAlreadyExistsException();
-        }
+        Currency baseCurrencyId = currencyDao.getByCode(createExchangeRateDto.getBaseCurrency())
+                .orElseThrow(CurrencyNotFoundException::new);
+        Currency targetCurrencyId = currencyDao.getByCode(createExchangeRateDto.getTargetCurrency())
+                .orElseThrow(CurrencyNotFoundException::new);
+
+        exchangeRatesDao.findByCode(createExchangeRateDto.getBaseCurrency(),
+                        createExchangeRateDto.getTargetCurrency())
+                .ifPresent(code -> {
+                    throw new CurrencyPairAlreadyExistsException();
+                });
+
         ExchangeRate exchangeRate = new ExchangeRate();
         exchangeRate.setBaseCurrencyId(baseCurrencyId);
         exchangeRate.setTargetCurrencyId(targetCurrencyId);
@@ -48,21 +51,21 @@ public class ExchangeRateService {
     }
 
     public ExchangeRateDto getExchangeRateByCode(String baseCurrencyCode, String targetCurrencyCode) {
-        ExchangeRate exchangeRate = exchangeRatesDao.findByCode(baseCurrencyCode, targetCurrencyCode);
-        if (exchangeRate == null) {
-            throw new CurrencyNotFoundException();
-        }
+        ExchangeRate exchangeRate = exchangeRatesDao.findByCode(baseCurrencyCode, targetCurrencyCode)
+                .orElseThrow(CurrencyNotFoundException::new);
         return exchangeRateMapper.toDto(exchangeRate);
     }
 
     public ExchangeRateDto updateExchangeRate(String baseCurrencyCode, String targetCurrencyCode, BigDecimal rate) {
-        Currency baseCurrency = currencyDao.getByCode(baseCurrencyCode);
-        Currency targetCurrency = currencyDao.getByCode(targetCurrencyCode);
-        ExchangeRate exchangeRate = exchangeRatesDao.findByCode(baseCurrency.getCode(), targetCurrency.getCode());
+        Currency baseCurrency = currencyDao.getByCode(baseCurrencyCode)
+                .orElseThrow(CurrencyNotFoundException::new);
+        Currency targetCurrency = currencyDao.getByCode(targetCurrencyCode)
+                .orElseThrow(CurrencyNotFoundException::new);
 
-        if (exchangeRate == null) {
-            throw new CurrencyNotFoundException();
-        }
+        ExchangeRate exchangeRate = exchangeRatesDao.findByCode(
+                        baseCurrency.getCode(),
+                        targetCurrency.getCode())
+                .orElseThrow(CurrencyNotFoundException::new);
 
         ExchangeRate exchangeRate1 = new ExchangeRate(exchangeRate.getId(),
                 baseCurrency,

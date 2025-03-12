@@ -2,6 +2,7 @@ package org.dankts.dao;
 
 import org.dankts.entity.Currency;
 import java.util.List;
+import java.util.Optional;
 
 public interface CurrencyDao {
 
@@ -9,6 +10,6 @@ public interface CurrencyDao {
 
     Currency save(Currency entity);
 
-    Currency getByCode(String code);
+    Optional<Currency> getByCode(String code);
 
 }

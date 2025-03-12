@@ -10,16 +10,25 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class CurrencyDaoImpl implements CurrencyDao {
+    private static final String FIND_ALL_SQL = """
+            SELECT id, code, full_name, sign FROM currencies
+            """;
+    private static final String GET_CURRENCY_BY_CODE_SQL = """
+            SELECT id, code, full_name, sign FROM currencies
+            WHERE code = ?
+            """;
+    private static final String SAVE_CURRENCY_SQL = """
+            INSERT INTO currencies (code, full_name, sign)
+            VALUES (?, ? ,?);
+            """;
 
     @Override
     public List<Currency> findAll() {
-        String findAllSql = """
-                SELECT id, code, full_name, sign FROM currencies
-                """;
         try (Connection connection = ConnectionManager.getConnection();
-             var preparedStatement = connection.prepareStatement(findAllSql)) {
+             var preparedStatement = connection.prepareStatement(FIND_ALL_SQL)) {
             ResultSet resultSet = preparedStatement.executeQuery();
             List<Currency> result = new ArrayList<>();
             while (resultSet.next()) {
@@ -33,12 +42,8 @@ public class CurrencyDaoImpl implements CurrencyDao {
 
     @Override
     public Currency save(Currency entity) {
-        String saveCurrencySql = """
-                INSERT INTO currencies (code, full_name, sign)
-                VALUES (?, ? ,?);
-                """;
         try (Connection connection = ConnectionManager.getConnection();
-             var preparedStatement = connection.prepareStatement(saveCurrencySql, Statement.RETURN_GENERATED_KEYS)) {
+             var preparedStatement = connection.prepareStatement(SAVE_CURRENCY_SQL, Statement.RETURN_GENERATED_KEYS)) {
             preparedStatement.setString(1, entity.getCode());
             preparedStatement.setString(2, entity.getFullName());
             preparedStatement.setString(3, entity.getSign());
@@ -54,20 +59,16 @@ public class CurrencyDaoImpl implements CurrencyDao {
     }
 
     @Override
-    public Currency getByCode(String code) {
-        String getCurrencyByCodeSql = """
-                SELECT id, code, full_name, sign FROM currencies
-                WHERE code = ?
-                """;
+    public Optional<Currency> getByCode(String code) {
         try (Connection connection = ConnectionManager.getConnection();
-             var preparedStatement = connection.prepareStatement(getCurrencyByCodeSql)) {
+             var preparedStatement = connection.prepareStatement(GET_CURRENCY_BY_CODE_SQL)) {
             preparedStatement.setString(1, code);
             ResultSet resultSet = preparedStatement.executeQuery();
             Currency currency = null;
             if (resultSet.next()) {
                 currency = buildCurrency(resultSet);
             }
-            return currency;
+            return Optional.ofNullable(currency);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }

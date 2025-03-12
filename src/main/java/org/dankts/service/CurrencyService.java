@@ -25,18 +25,18 @@ public class CurrencyService {
 
     public CurrencyDto create(CreateCurrencyDto entity) {
         Currency currency = currencyMapper.toEntity(entity);
-        if (currencyDao.getByCode(currency.getCode()).getCode().equals(entity.getCode())) {
-            throw new CurrencyCodeExistsException();
-        }
+        currencyDao.getByCode(currency.getCode()).ifPresent(
+                existCurrency -> {
+                    throw new CurrencyCodeExistsException();
+                }
+        );
         Currency saveCurrency = currencyDao.save(currency);
         return currencyMapper.toDto(saveCurrency);
     }
 
     public CurrencyDto getCurrencyByCode(String code) {
-        Currency byCode = currencyDao.getByCode(code);
-        if (byCode == null) {
-            throw new CurrencyNotFoundException();
-        }
-        return currencyMapper.toDto(currencyDao.getByCode(code));
+        Currency currency = currencyDao.getByCode(code)
+                .orElseThrow(CurrencyNotFoundException::new);
+        return currencyMapper.toDto(currency);
     }
 }
