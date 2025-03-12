@@ -21,7 +21,7 @@ import java.sql.SQLException;
             try {
                 chain.doFilter(request, response);
             } catch (Exception e) {
-                httpServletResponse.sendError(handleException(e));
+                httpServletResponse.setStatus(handleException(e));
             }
         }
 
